@@ -15,3 +15,5 @@ allowed_actions:
 
   health:
     enabled: true
+  version:
+    enabled: true
