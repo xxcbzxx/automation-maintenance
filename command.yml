@@ -1,0 +1,29 @@
+schema_version: 1
+
+host:
+  hostname: srv01
+  role: docker
+
+policy:
+  enabled: true
+
+allowed_actions:
+  check:
+    enabled: true
+    command: /usr/local/sbin/n8n-maintenance
+    argument: check
+
+  patch:
+    enabled: true
+    command: /usr/local/sbin/n8n-maintenance
+    argument: patch
+
+  reboot:
+    enabled: true
+    command: /usr/local/sbin/n8n-maintenance
+    argument: reboot
+
+  health:
+    enabled: true
+    command: /usr/local/sbin/n8n-maintenance
+    argument: health
