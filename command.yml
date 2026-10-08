@@ -1,9 +1,5 @@
 schema_version: 1
 
-host:
-  hostname: srv01
-  role: docker
-
 policy:
   enabled: true
 
