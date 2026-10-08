@@ -19,7 +19,7 @@ allowed_actions:
     argument: patch
 
   reboot:
-    enabled: true
+    enabled: false
     command: /usr/local/sbin/n8n-maintenance
     argument: reboot
 
