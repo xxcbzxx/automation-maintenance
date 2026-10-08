@@ -10,20 +10,12 @@ policy:
 allowed_actions:
   check:
     enabled: true
-    command: /usr/local/sbin/n8n-maintenance
-    argument: check
 
   patch:
     enabled: true
-    command: /usr/local/sbin/n8n-maintenance
-    argument: patch
 
   reboot:
     enabled: false
-    command: /usr/local/sbin/n8n-maintenance
-    argument: reboot
 
   health:
     enabled: true
-    command: /usr/local/sbin/n8n-maintenance
-    argument: health
