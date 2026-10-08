@@ -1,0 +1,36 @@
+#!/bin/bash
+
+set -u
+
+POLICY="/etc/n8n-maintenance/policy.yml"
+ACTION="${1:-}"
+
+fail() {
+    echo "===MAINTENANCE_RESULT==="
+    echo "STATUS=DENIED"
+    echo "REASON=$1"
+    exit 1
+}
+
+error() {
+    echo "===MAINTENANCE_RESULT==="
+    echo "STATUS=ERROR"
+    echo "REASON=$1"
+    exit 2
+}
+
+[ -f "$POLICY" ] ||
+    fail "Policy file not found"
+
+[ -n "$ACTION" ] ||
+    fail "No action supplied"
+
+case "$ACTION" in
+    check|patch|reboot|health)
+        ;;
+    *)
+        fail "Unknown action: $ACTION"
+        ;;
+esac
+
+CURRENT_HOSTNAME=$(hostname)
