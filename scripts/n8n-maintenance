@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -u
-
+VERSION="2026.10.09.1"
 POLICY="/etc/n8n-maintenance/policy.yml"
 ACTION="${1:-}"
 
@@ -26,7 +26,7 @@ error() {
     fail "No action supplied"
 
 case "$ACTION" in
-    check|patch|reboot|health)
+    check|patch|reboot|health|version)#add new keywords with |
         ;;
     *)
         fail "Unknown action: $ACTION"
@@ -51,6 +51,7 @@ ACTION_ENABLED=$(
 
 echo "===MAINTENANCE_STARTED==="
 echo "HOSTNAME=$CURRENT_HOSTNAME"
+echo "VERSION=${VERSION}"
 echo "ACTION=$ACTION"
 echo "STARTED_AT=$(date -Iseconds)"
 
@@ -71,6 +72,7 @@ case "$ACTION" in
 
         echo "===MAINTENANCE_RESULT==="
         echo "STATUS=SUCCESS"
+        echo "VERSION=${VERSION}"
         echo "ACTION=check"
         echo "UPDATE_COUNT=$UPDATE_COUNT"
         ;;
@@ -83,6 +85,7 @@ case "$ACTION" in
         fi
 
         echo "===MAINTENANCE_RESULT==="
+        echo "VERSION=${VERSION}"
         echo "STATUS=SUCCESS"
         echo "ACTION=patch"
         ;;
@@ -107,9 +110,41 @@ case "$ACTION" in
             echo "STATUS=WARNING"
         fi
 
+        echo "VERSION=${VERSION}"
         echo "ACTION=health"
         echo "FAILED_SERVICES=$FAILED_SERVICES"
         ;;
+    health)
+        echo "===HEALTH==="
+
+        FAILED_SERVICES=$(
+            systemctl --failed --no-legend --plain 2>/dev/null |
+                sed '/^[[:space:]]*$/d' |
+                wc -l
+        )
+
+        echo "RUNNING_KERNEL=$(uname -r)"
+        echo "FAILED_SERVICES=$FAILED_SERVICES"
+
+        echo "===MAINTENANCE_RESULT==="
+
+        if [ "$FAILED_SERVICES" -eq 0 ]; then
+            echo "STATUS=SUCCESS"
+        else
+            echo "STATUS=WARNING"
+        fi
+
+        echo "VERSION=${VERSION}"
+        echo "ACTION=health"
+        echo "FAILED_SERVICES=$FAILED_SERVICES"
+        ;;
+
+    version) #starts of version block
+        echo "===MAINTENANCE_RESULT==="
+        echo "STATUS=SUCCESS"
+        echo "VERSION=${VERSION}"
+        echo "ACTION=version"
+        ;;#end of version block
 
     reboot)
         echo "===REBOOT==="
