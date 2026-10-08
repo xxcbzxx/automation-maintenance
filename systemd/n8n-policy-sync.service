@@ -1,0 +1,10 @@
+[Unit]
+Description=Synchronize n8n maintenance policy from GitHub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/n8n-policy-sync
+User=root
+Group=root
