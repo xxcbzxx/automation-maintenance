@@ -11,7 +11,7 @@ allowed_actions:
     enabled: true
 
   reboot:
-    enabled: false
+    enabled: true
 
   health:
     enabled: true
