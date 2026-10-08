@@ -34,3 +34,91 @@ case "$ACTION" in
 esac
 
 CURRENT_HOSTNAME=$(hostname)
+
+POLICY_ENABLED=$(
+    yq -r '.policy.enabled' "$POLICY"
+)
+
+[ "$POLICY_ENABLED" = "true" ] ||
+    fail "Maintenance policy disabled"
+
+ACTION_ENABLED=$(
+    yq -r ".allowed_actions.${ACTION}.enabled // false" "$POLICY"
+)
+
+[ "$ACTION_ENABLED" = "true" ] ||
+    fail "Action '$ACTION' disabled"
+
+echo "===MAINTENANCE_STARTED==="
+echo "HOSTNAME=$CURRENT_HOSTNAME"
+echo "ACTION=$ACTION"
+echo "STARTED_AT=$(date -Iseconds)"
+
+case "$ACTION" in
+
+    check)
+        echo "===UPDATES==="
+
+        apt list --upgradable 2>/dev/null |
+            tail -n +2
+
+        UPDATE_COUNT=$(
+            apt list --upgradable 2>/dev/null |
+                tail -n +2 |
+                sed '/^[[:space:]]*$/d' |
+                wc -l
+        )
+
+        echo "===MAINTENANCE_RESULT==="
+        echo "STATUS=SUCCESS"
+        echo "ACTION=check"
+        echo "UPDATE_COUNT=$UPDATE_COUNT"
+        ;;
+
+    patch)
+        echo "===PATCH==="
+
+        if ! /usr/local/sbin/n8n-patch; then
+            error "n8n-patch failed"
+        fi
+
+        echo "===MAINTENANCE_RESULT==="
+        echo "STATUS=SUCCESS"
+        echo "ACTION=patch"
+        ;;
+
+    health)
+        echo "===HEALTH==="
+
+        FAILED_SERVICES=$(
+            systemctl --failed --no-legend --plain 2>/dev/null |
+                sed '/^[[:space:]]*$/d' |
+                wc -l
+        )
+
+        echo "RUNNING_KERNEL=$(uname -r)"
+        echo "FAILED_SERVICES=$FAILED_SERVICES"
+
+        echo "===MAINTENANCE_RESULT==="
+
+        if [ "$FAILED_SERVICES" -eq 0 ]; then
+            echo "STATUS=SUCCESS"
+        else
+            echo "STATUS=WARNING"
+        fi
+
+        echo "ACTION=health"
+        echo "FAILED_SERVICES=$FAILED_SERVICES"
+        ;;
+
+    reboot)
+        echo "===REBOOT==="
+
+        sync
+
+        /usr/sbin/reboot
+        ;;
+
+esac
+
+exit 0
