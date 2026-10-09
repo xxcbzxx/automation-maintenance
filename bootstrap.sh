@@ -66,7 +66,8 @@ if [ "$MOVED_FILES" -gt 0 ]; then
     echo
 else
     rmdir "$BACKUP_DIR" 2>/dev/null || true
-filog "Creating directories"
+fi 
+log "Creating directories"
 
 mkdir -p /etc/n8n-maintenance
 
