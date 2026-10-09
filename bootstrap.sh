@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO="https://raw.githubusercontent.com/xxcbzxx/automation-maintenance/main"
-fi
+
 log() {
     echo "[BOOTSTRAP] $*"
 }
