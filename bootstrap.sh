@@ -155,7 +155,7 @@ echo "Sync Script: /usr/local/sbin/n8n-policy-sync"
 echo "Timer:       n8n-policy-sync.timer"
 echo
 echo "Legacy sudoers backup location:"
-echo "  ${BACKUP_DIR:-None}"
+echo "${BACKUP_DIR:-None}"
 echo
 echo "Current Policy:"
 echo "  Policy Enabled : $(yq -r '.policy.enabled' /etc/n8n-maintenance/policy.yml)"
