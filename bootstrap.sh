@@ -177,5 +177,17 @@ echo
 echo "========================================="
 echo "Bootstrap completed successfully"
 echo "========================================="
-echo "Host:    $(hostname)"
-echo "Policy:  /etc/n8n-maintenance/policy
+echo
+
+echo "Host:        $(hostname)"
+echo "Policy:      /etc/n8n-maintenance/policy.yml"
+echo "Dispatcher:  /usr/local/sbin/n8n-maintenance"
+echo "Sync Script: /usr/local/sbin/n8n-policy-sync"
+echo "Timer:       n8n-policy-sync.timer"
+
+echo
+echo "Current Policy:"
+echo "  Policy Enabled : $(yq -r '.policy.enabled' /etc/n8n-maintenance/policy.yml)"
+echo "  Patch Enabled  : $(yq -r '.allowed_actions.patch.enabled' /etc/n8n-maintenance/policy.yml)"
+echo "  Reboot Enabled : $(yq -r '.allowed_actions.reboot.enabled' /etc/n8n-maintenance/policy.yml)"
+echo
