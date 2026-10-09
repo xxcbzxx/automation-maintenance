@@ -3,7 +3,9 @@
 set -euo pipefail
 
 REPO="https://raw.githubusercontent.com/xxcbzxx/automation-maintenance/main"
-
+if [[ "${1:-}" == "--clean" ]]; then
+    CHOICE="R"
+fi
 log() {
     echo "[BOOTSTRAP] $*"
 }
