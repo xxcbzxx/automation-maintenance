@@ -3,8 +3,6 @@
 set -euo pipefail
 
 REPO="https://raw.githubusercontent.com/xxcbzxx/automation-maintenance/main"
-if [[ "${1:-}" == "--clean" ]]; then
-    CHOICE="R"
 fi
 log() {
     echo "[BOOTSTRAP] $*"
@@ -35,71 +33,40 @@ ls -la /etc/sudoers.d/
 
 echo
 
-LEGACY_FOUND=false
+BACKUP_DIR="/root/bootstrap-backups/sudoers.d/$(date +%Y%m%d-%H%M%S)"
 
-for file in \
-    /etc/sudoers.d/n8n-patch \
-    /etc/sudoers.d/n8n-inventory
-do
-    if [[ -f "$file" ]]; then
-        echo "[FOUND] $file"
-        LEGACY_FOUND=true
-    fi
+mkdir -p "$BACKUP_DIR"
+
+MOVED_FILES=0
+
+for file in /etc/sudoers.d/*; do
+
+    [ -f "$file" ] || continue
+
+    name="$(basename "$file")"
+
+    case "$name" in
+        README|n8n-maintenance)
+            continue
+            ;;
+    esac
+
+    echo "[BACKUP] Moving $file"
+
+    mv "$file" "$BACKUP_DIR/"
+
+    MOVED_FILES=$((MOVED_FILES + 1))
+
 done
 
-if [[ "$LEGACY_FOUND" == true ]]; then
-
+if [ "$MOVED_FILES" -gt 0 ]; then
     echo
-    echo "Legacy sudoers files detected."
+    echo "[BOOTSTRAP] Existing sudoers files moved to:"
+    echo "  $BACKUP_DIR"
     echo
-    echo "Choose:"
-    echo "  K = Keep existing rules"
-    echo "  R = Backup and remove legacy rules"
-    echo "  A = Abort"
-    echo
-
-    read -rp "Selection [K/R/A]: " CHOICE
-
-    case "${CHOICE^^}" in
-
-        K)
-            log "Keeping legacy sudoers files"
-            ;;
-
-        R)
-            log "Backing up and removing legacy sudoers files"
-
-            mkdir -p /root/bootstrap-backups
-
-            for file in \
-                /etc/sudoers.d/n8n-patch \
-                /etc/sudoers.d/n8n-inventory
-            do
-                if [[ -f "$file" ]]; then
-
-                    target="/root/bootstrap-backups/$(basename "$file").$(date +%s)"
-
-                    cp "$file" "$target"
-
-                    rm -f "$file"
-
-                    echo "[BACKUP] $file -> $target"
-                fi
-            done
-            ;;
-
-        A)
-            fail "Aborted by user"
-            ;;
-
-        *)
-            fail "Invalid selection"
-            ;;
-
-    esac
-fi
-
-log "Creating directories"
+else
+    rmdir "$BACKUP_DIR" 2>/dev/null || true
+filog "Creating directories"
 
 mkdir -p /etc/n8n-maintenance
 
@@ -186,7 +153,9 @@ echo "Policy:      /etc/n8n-maintenance/policy.yml"
 echo "Dispatcher:  /usr/local/sbin/n8n-maintenance"
 echo "Sync Script: /usr/local/sbin/n8n-policy-sync"
 echo "Timer:       n8n-policy-sync.timer"
-
+echo
+echo "Legacy sudoers backup location:"
+echo "  ${BACKUP_DIR:-None}"
 echo
 echo "Current Policy:"
 echo "  Policy Enabled : $(yq -r '.policy.enabled' /etc/n8n-maintenance/policy.yml)"
