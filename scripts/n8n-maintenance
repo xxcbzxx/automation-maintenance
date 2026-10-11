@@ -155,8 +155,7 @@ case "$ACTION" in
         return 1
     fi
     docker exec "$CONTAINER" n8n --version
-}
-        ;;#end of version block
+;;#end of version block
 
     reboot)
         echo "===REBOOT==="
