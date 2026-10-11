@@ -26,7 +26,7 @@ error() {
     fail "No action supplied"
 
 case "$ACTION" in
-    check|patch|reboot|health|version)#add new keywords with |
+    check|patch|reboot|health|version|dav_n8n_version)#add new keywords with |
         ;;
     *)
         fail "Unknown action: $ACTION"
@@ -144,6 +144,18 @@ case "$ACTION" in
         echo "STATUS=SUCCESS"
         echo "VERSION=${VERSION}"
         echo "ACTION=version"
+        ;;#end of version block
+
+ dav_n8n_version) #starts of block
+    CONTAINER=$(docker ps \
+      --filter "label=com.docker.swarm.service.name=dav-n8n_dav-n8n" \
+      --format '{{.ID}}' | head -1)
+ if [ -z "$CONTAINER" ]; then
+        echo "ERROR=CONTAINER_NOT_FOUND"
+        return 1
+    fi
+    docker exec "$CONTAINER" n8n --version
+}
         ;;#end of version block
 
     reboot)
