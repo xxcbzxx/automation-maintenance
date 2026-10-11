@@ -154,7 +154,11 @@ case "$ACTION" in
         echo "ERROR=CONTAINER_NOT_FOUND"
         exit 1
     fi
-    docker exec "$CONTAINER" n8n --version
+    N8N_VERSION=$(docker exec "$CONTAINER" n8n --version)
+echo "===MAINTENANCE_RESULT==="
+    echo "STATUS=SUCCESS"
+    echo "ACTION=dav_n8n_version"
+    echo "N8N_VERSION=${N8N_VERSION}"
 ;;#end of version block
 
     reboot)
