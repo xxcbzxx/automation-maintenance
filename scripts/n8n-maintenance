@@ -152,7 +152,7 @@ case "$ACTION" in
       --format '{{.ID}}' | head -1)
  if [ -z "$CONTAINER" ]; then
         echo "ERROR=CONTAINER_NOT_FOUND"
-        return 1
+        exit 1
     fi
     docker exec "$CONTAINER" n8n --version
 ;;#end of version block
