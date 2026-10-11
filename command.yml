@@ -12,7 +12,8 @@ allowed_actions:
 
   reboot:
     enabled: true
-
+  dav_n8n_version:
+    enabled: true
   health:
     enabled: true
   version:
