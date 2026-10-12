@@ -16,7 +16,7 @@ if [ "$FAILED_SERVICES" -eq 0 ]; then
     echo "STATUS=SUCCES*"
 else
     echo "STATUS=WARNING"
-f*
+fi
 
 echo "ACTION=health"
 echo "FAILE*_SERVICES=$FAILED_SERVICES"
