@@ -6,14 +6,14 @@ FAILED_SERVICES=$(
     wc -l
 )
 
-echo "===HEALT*==="
-echo "RUNNING_KERNEL=$(uname *r)"
+echo "===HEALTH==="
+echo "RUNNING_KERNEL=$(uname -r)"
 echo "FAILED_SERVICES=$FAILED_*ERVICES"
 
-echo "===MAINTENANCE_RES*LT==="
+echo "===MAINTENANCE_RESULT==="
 
 if [ "$FAILED_SERVICES" -eq 0 ]; then
-    echo "STATUS=SUCCES*"
+    echo "STATUS=SUCCESS"
 else
     echo "STATUS=WARNING"
 fi
