@@ -16,4 +16,3 @@ echo "===MAINTENANCE_RESULT==="
 echo "STATUS=SUCCESS"
 echo "ACTION=check"
 echo "UPDATE_COUNT=${UPDATE_COUNT}"
-``
