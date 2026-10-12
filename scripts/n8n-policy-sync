@@ -2,49 +2,63 @@
 
 set -u
 
-URL="https://raw.githubusercontent.com/xxcbzxx/automation-maintenance/main/command.yml"
+REPO="https://raw.githubusercontent.com/xxcbzxx/automation-maintenance/main"
 
 POLICY_DIR="/etc/n8n-maintenance"
+ACTIONS_DIR="${POLICY_DIR}/actions"
+
 POLICY_FILE="${POLICY_DIR}/policy.yml"
-TEMP_FILE="${POLICY_DIR}/policy.yml.tmp"
+POLICY_TEMP="${POLICY_DIR}/policy.yml.tmp"
+
+ACTIONS_MANIFEST="${POLICY_DIR}/actions.yml"
+ACTIONS_MANIFEST_TEMP="${POLICY_DIR}/actions.yml.tmp"
+
+DISPATCHER="/usr/local/sbin/n8n-maintenance"
+DISPATCHER_TEMP="/usr/local/sbin/n8n-maintenance.tmp"
 
 fail() {
     echo "STATUS=ERROR"
     echo "REASON=$1"
-    rm -f "$TEMP_FILE"
+
+    rm -f \
+        "$POLICY_TEMP" \
+        "$ACTIONS_MANIFEST_TEMP" \
+        "$DISPATCHER_TEMP"
+
     exit 1
 }
 
 mkdir -p "$POLICY_DIR"
+mkdir -p "$ACTIONS_DIR"
 
 echo "===POLICY_SYNC_STARTED==="
 echo "HOSTNAME=$(hostname)"
 echo "STARTED_AT=$(date -Iseconds)"
 
-# Download to temporary file first.
+#
+# Download policy
+#
+
 curl \
     -fsSL \
     --connect-timeout 10 \
     --max-time 30 \
-    "${URL}?$(date +%s)" \
-    -o "$TEMP_FILE" ||
+    "${REPO}/command.yml?$(date +%s)" \
+    -o "$POLICY_TEMP" ||
     fail "Policy download failed"
 
-# Make sure the file is not empty.
-[ -s "$TEMP_FILE" ] ||
+[ -s "$POLICY_TEMP" ] ||
     fail "Downloaded policy is empty"
 
-# Make sure YAML can actually be parsed.
-yq '.' "$TEMP_FILE" >/dev/null 2>&1 ||
+yq '.' "$POLICY_TEMP" >/dev/null 2>&1 ||
     fail "Downloaded policy contains invalid YAML"
 
-# Validate required values.
 SCHEMA_VERSION=$(
-    yq -r '.schema_version // empty' "$TEMP_FILE"
+    yq -r '.schema_version // empty' "$POLICY_TEMP"
 )
 
 POLICY_ENABLED=$(
-    yq -r '.policy.enabled // empty' "$TEMP_FILE"
+    yq -r '.policy.enabled // empty' "$POLICY_TEMP"
 )
 
 [ "$SCHEMA_VERSION" = "1" ] ||
@@ -54,16 +68,103 @@ case "$POLICY_ENABLED" in
     true|false)
         ;;
     *)
-        fail "Invalid or missing*policy.enabled"
+        fail "Invalid policy.enabled"
         ;;
 esac
 
-#*Atomically replace the previous kn*wn-good policy.
-chown root:root "$TEMP_FILE"
-chmod 0644 "$TEMP_FILE"
-mv -f "$TEMP_FILE" "$POLICY_FILE"
+chown root:root "$POLICY_TEMP"
+chmod 0644 "$POLICY_TEMP"
+
+mv -f "$POLICY_TEMP" "$POLICY_FILE"
+
+#
+# Download actions manifest
+#
+
+curl \
+    -fsSL \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "${REPO}/actions.yml?$(date +%s)" \
+    -o "$ACTIONS_MANIFEST_TEMP" ||
+    fail "Actions manifest download failed"
+
+[ -s "$ACTIONS_MANIFEST_TEMP" ] ||
+    fail "Downloaded actions manifest is empty"
+
+yq '.' "$ACTIONS_MANIFEST_TEMP" >/dev/null 2>&1 ||
+    fail "Downloaded actions manifest contains invalid YAML"
+
+chown root:root "$ACTIONS_MANIFEST_TEMP"
+chmod 0644 "$ACTIONS_MANIFEST_TEMP"
+
+mv -f \
+    "$ACTIONS_MANIFEST_TEMP" \
+    "$ACTIONS_MANIFEST"
+
+#
+# Download dispatcher
+#
+
+curl \
+    -fsSL \
+    --connect-timeout 10 \
+    --max-time 30 \
+    "${REPO}/scripts/n8n-maintenance?$(date +%s)" \
+    -o "$DISPATCHER_TEMP" ||
+    fail "Dispatcher download failed"
+
+[ -s "$DISPATCHER_TEMP" ] ||
+    fail "Dispatcher download empty"
+
+bash -n "$DISPATCHER_TEMP" ||
+    fail "Dispatcher syntax invalid"
+
+chown root:root "$DISPATCHER_TEMP"
+chmod 0755 "$DISPATCHER_TEMP"
+
+mv -f \
+    "$DISPATCHER_TEMP" \
+    "$DISPATCHER"
+
+#
+# Download actions
+#
+
+while IFS= read -r ACTION_FILE; do
+
+    echo "SYNC_ACTION=${ACTION_FILE}"
+
+    ACTION_TEMP="${ACTIONS_DIR}/${ACTION_FILE}.tmp"
+    ACTION_TARGET="${ACTIONS_DIR}/${ACTION_FILE}"
+
+    curl \
+        -fsSL \
+        --connect-timeout 10 \
+        --max-time 30 \
+        "${REPO}/actions/${ACTION_FILE}?$(date +%s)" \
+        -o "$ACTION_TEMP" ||
+        fail "Failed downloading action ${ACTION_FILE}"
+
+    [ -s "$ACTION_TEMP" ] ||
+        fail "Action ${ACTION_FILE} is empty"
+
+    bash -n "$ACTION_TEMP" ||
+        fail "Action ${ACTION_FILE} contains syntax errors"
+
+    chown root:root "$ACTION_TEMP"
+    chmod 0755 "$ACTION_TEMP"
+
+    mv -f \
+        "$ACTION_TEMP" \
+        "$ACTION_TARGET"
+
+done < <(
+    yq -r '.actions[]' "$ACTIONS_MANIFEST"
+)
+
 echo "===POLICY_SYNC_RESULT==="
 echo "STATUS=SUCCESS"
-echo "SCHEMA_VERSION=$SCHEMA_VERSION"
-echo "POLICY_ENABLED=$POLICY_ENABLED"
+echo "SCHEMA_VERSION=${SCHEMA_VERSION}"
+echo "POLICY_ENABLED=${POLICY_ENABLED}"
 echo "FINISHED_AT=$(date -Iseconds)"
