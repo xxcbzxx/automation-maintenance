@@ -66,10 +66,14 @@ if [ "$MOVED_FILES" -gt 0 ]; then
     echo
 else
     rmdir "$BACKUP_DIR" 2>/dev/null || true
-fi 
+fi
+
 log "Creating directories"
 
 mkdir -p /etc/n8n-maintenance
+mkdir -p /etc/n8n-maintenance/actions
+
+chmod 0755 /etc/n8n-maintenance/actions
 
 log "Downloading policy"
 
@@ -77,6 +81,19 @@ curl -fsSL \
     -H 'Cache-Control: no-cache' \
     "${REPO}/command.yml?$(date +%s)" \
     -o /etc/n8n-maintenance/policy.yml
+
+log "Downloading actions manifest"
+
+curl -fsSL \
+    -H 'Cache-Control: no-cache' \
+    "${REPO}/actions.yml?$(date +%s)" \
+    -o /etc/n8n-maintenance/actions.yml
+
+[ -s /etc/n8n-maintenance/actions.yml ] ||
+    fail "actions.yml is empty"
+
+yq '.' /etc/n8n-maintenance/actions.yml >/dev/null ||
+    fail "Invalid actions.yml"
 
 log "Downloading scripts"
 
@@ -87,6 +104,24 @@ curl -fsSL \
 curl -fsSL \
     "${REPO}/scripts/n8n-policy-sync?$(date +%s)" \
     -o /usr/local/sbin/n8n-policy-sync
+
+log "Downloading actions"
+
+while IFS= read -r ACTION_FILE; do
+
+    curl -fsSL \
+        "${REPO}/actions/${ACTION_FILE}?$(date +%s)" \
+        -o "/etc/n8n-maintenance/actions/${ACTION_FILE}"
+
+    [ -s "/etc/n8n-maintenance/actions/${ACTION_FILE}" ] ||
+        fail "Downloaded action ${ACTION_FILE} is empty"
+
+    bash -n "/etc/n8n-maintenance/actions/${ACTION_FILE}" ||
+        fail "Syntax validation failed for ${ACTION_FILE}"
+
+done < <(
+    yq -r '.actions[]' /etc/n8n-maintenance/actions.yml
+)
 
 log "Downloading systemd units"
 
@@ -102,16 +137,27 @@ log "Setting ownership"
 
 chown root:root \
     /etc/n8n-maintenance/policy.yml \
+    /etc/n8n-maintenance/actions.yml \
     /usr/local/sbin/n8n-maintenance \
     /usr/local/sbin/n8n-policy-sync \
     /etc/systemd/system/n8n-policy-sync.service \
     /etc/systemd/system/n8n-policy-sync.timer
 
-chmod 0644 /etc/n8n-maintenance/policy.yml
+chown root:root \
+    /etc/n8n-maintenance/actions/* \
+    2>/dev/null || true
+
+chmod 0644 \
+    /etc/n8n-maintenance/policy.yml \
+    /etc/n8n-maintenance/actions.yml
 
 chmod 0755 \
     /usr/local/sbin/n8n-maintenance \
     /usr/local/sbin/n8n-policy-sync
+
+chmod 0755 \
+    /etc/n8n-maintenance/actions/* \
+    2>/dev/null || true
 
 log "Creating sudoers rule"
 
@@ -151,15 +197,19 @@ echo
 
 echo "Host:        $(hostname)"
 echo "Policy:      /etc/n8n-maintenance/policy.yml"
+echo "Actions:     /etc/n8n-maintenance/actions"
 echo "Dispatcher:  /usr/local/sbin/n8n-maintenance"
 echo "Sync Script: /usr/local/sbin/n8n-policy-sync"
 echo "Timer:       n8n-policy-sync.timer"
 echo
+
 echo "Legacy sudoers backup location:"
 echo "${BACKUP_DIR:-None}"
+
 echo
+
 echo "Current Policy:"
 echo "  Policy Enabled : $(yq -r '.policy.enabled' /etc/n8n-maintenance/policy.yml)"
-echo "  Patch Enabled  : $(yq -r '.allowed_actions.patch.enabled' /etc/n8n-maintenance/policy.yml)"
-echo "  Reboot Enabled : $(yq -r '.allowed_actions.reboot.enabled' /etc/n8n-maintenance/policy.yml)"
+echo "  Patch Enabled  : $(yq -r '.allowed_actions.patch.enabled // false' /etc/n8n-maintenance/policy.yml)"
+echo "  Reboot Enabled : $(yq -r '.allowed_actions.reboot.enabled // false' /etc/n8n-maintenance/policy.yml)"
 echo
