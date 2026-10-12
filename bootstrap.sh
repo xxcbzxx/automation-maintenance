@@ -110,8 +110,9 @@ log "Downloading actions"
 while IFS= read -r ACTION_FILE; do
 echo "[BOOTSTRAP] Downloading action ${ACTION_FILE}"
     curl -fsSL \
-        "${REPO}/actions/${ACTION_FILE}?$(date +%s)" \
-        -o "/etc/n8n-maintenance/actions/${ACTION_FILE}"
+    "${REPO}/actions/${ACTION_FILE}?$(date +%s)" \
+    -o "/etc/n8n-maintenance/actions/${ACTION_FILE}" ||
+    fail "Failed downloading action ${ACTION_FILE}"
 
     [ -s "/etc/n8n-maintenance/actions/${ACTION_FILE}" ] ||
         fail "Downloaded action ${ACTION_FILE} is empty"
