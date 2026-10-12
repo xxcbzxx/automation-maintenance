@@ -1,0 +1,7 @@
+actions:
+  - check.sh
+  - health.sh
+  - patch.sh
+  - reboot.sh
+  - version.sh
+  - dav_n8n_version.sh
