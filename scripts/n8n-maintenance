@@ -3,8 +3,10 @@
 set -u
 
 VERSION="2026.10.12.1"
+
 POLICY="/etc/n8n-maintenance/policy.yml"
 ACTIONS_DIR="/etc/n8n-maintenance/actions"
+
 ACTION="${1:-}"
 
 fail() {
@@ -21,6 +23,13 @@ error() {
     exit 2
 }
 
+#
+# Validation
+#
+
+[ -d "$ACTIONS_DIR" ] ||
+    fail "Actions directory not found"
+
 [ -f "$POLICY" ] ||
     fail "Policy file not found"
 
@@ -31,6 +40,13 @@ SCRIPT="${ACTIONS_DIR}/${ACTION}.sh"
 
 [ -f "$SCRIPT" ] ||
     fail "Unknown action: $ACTION"
+
+[ -x "$SCRIPT" ] ||
+    fail "Action is not executable: $ACTION"
+
+#
+# Policy validation
+#
 
 POLICY_ENABLED=$(
     yq -r '.policy.enabled // false' "$POLICY"
@@ -46,10 +62,18 @@ ACTION_ENABLED=$(
 [ "$ACTION_ENABLED" = "true" ] ||
     fail "Action '$ACTION' disabled"
 
+#
+# Start execution
+#
+
 echo "===MAINTENANCE_STARTED==="
 echo "HOSTNAME=$(hostname)"
 echo "VERSION=${VERSION}"
 echo "ACTION=${ACTION}"
 echo "STARTED_AT=$(date -Iseconds)"
 
-bash "$SCRIPT"
+#
+# Execute action
+#
+
+exec bash "$SCRIPT"
