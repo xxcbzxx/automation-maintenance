@@ -5,4 +5,4 @@ actions:
   - reboot.sh
   - version.sh
   - dav_n8n_version.sh
-  - ssh-audit.sh
+  - ssh_audit.sh
