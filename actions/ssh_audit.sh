@@ -5,7 +5,7 @@ set -euo pipefail
 HOSTNAME=$(hostname)
 TIMESTAMP=$(date -Iseconds)
 
-SSHD_T=$(sshd -T 2>/dev/null || true)
+SSHD_T="$(sshd -T 2>/dev/null || true)"
 
 get_setting() {
     local key="$1"
@@ -55,19 +55,33 @@ fi
 
 ALLOWED_SOURCES=""
 
+# IPTABLES
 if command -v iptables-save >/dev/null 2>&1; then
-    ALLOWED_SOURCES=$(iptables-save 2>/dev/null | \
-        grep -- "--dport $SSH_PORT" | \
-        grep '\-s ' | \
-        sed -n 's/.*-s \([^ ]*\).*/\1/p' | \
-        sort -u)
+    IPTABLES_SOURCES=$(
+        iptables-save 2>/dev/null |
+        grep -- "--dport $SSH_PORT" |
+        grep '\-s ' |
+        sed -n 's/.*-s \([^ ]*\).*/\1/p' |
+        sort -u || true
+    )
+
+    if [ -n "$IPTABLES_SOURCES" ]; then
+        ALLOWED_SOURCES="$IPTABLES_SOURCES"
+    fi
 fi
 
+# NFTABLES
 if [ -z "$ALLOWED_SOURCES" ] && command -v nft >/dev/null 2>&1; then
-    ALLOWED_SOURCES=$(nft list ruleset 2>/dev/null | \
-        grep "$SSH_PORT" | \
-        grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' | \
-        sort -u)
+    NFT_SOURCES=$(
+        nft list ruleset 2>/dev/null |
+        grep "$SSH_PORT" |
+        grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+' |
+        sort -u || true
+    )
+
+    if [ -n "$NFT_SOURCES" ]; then
+        ALLOWED_SOURCES="$NFT_SOURCES"
+    fi
 fi
 
 FIREWALL_RESTRICTED=false
@@ -85,10 +99,12 @@ if [ -n "$ALLOWED_SOURCES" ]; then
     fi
 fi
 
-ALLOWED_SOURCES_JSON=$(printf '%s\n' "$ALLOWED_SOURCES" | \
-    sed '/^$/d' | \
-    awk '{printf "\"%s\",\n",$0}' | \
-    sed '$ s/,$//')
+ALLOWED_SOURCES_JSON=$(
+    printf '%s\n' "$ALLOWED_SOURCES" |
+    sed '/^$/d' |
+    awk '{printf "\"%s\",\n",$0}' |
+    sed '$ s/,$//'
+)
 
 cat <<EOF
 {
@@ -97,31 +113,24 @@ cat <<EOF
   "ssh": {
     "service_active": $(bool_json "$SERVICE_ACTIVE"),
     "service_enabled": $(bool_json "$SERVICE_ENABLED"),
-
     "port": "$SSH_PORT",
-
     "passwordauthentication": "$PASSWORDAUTH",
     "pubkeyauthentication": "$PUBKEYAUTH",
     "permitrootlogin": "$PERMITROOTLOGIN",
     "permitemptypasswords": "$PERMITEMPTYPASSWORDS",
     "kbdinteractiveauthentication": "$KBDINTERACTIVE",
     "usepam": "$USEPAM",
-
     "x11forwarding": "$X11FORWARDING",
     "allowtcpforwarding": "$ALLOWTCPFORWARDING",
-
     "maxauthtries": "$MAXAUTHTRIES",
     "logingracetime": "$LOGINGRACETIME",
-
     "clientaliveinterval": "$CLIENTALIVEINTERVAL",
     "clientalivecountmax": "$CLIENTALIVECOUNTMAX",
-
     "allowusers": "$ALLOWUSERS",
     "allowgroups": "$ALLOWGROUPS",
     "denyusers": "$DENYUSERS",
     "denygroups": "$DENYGROUPS"
   },
-
   "firewall": {
     "restricted": $FIREWALL_RESTRICTED,
     "jumphost_only": $JUMPHOST_ONLY,
