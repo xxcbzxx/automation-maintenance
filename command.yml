@@ -9,7 +9,7 @@ allowed_actions:
 
   patch:
     enabled: true
-  ssh-audit:
+  ssh_audit:
     enabled: true
   reboot:
     enabled: true
