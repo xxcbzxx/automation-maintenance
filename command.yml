@@ -9,7 +9,8 @@ allowed_actions:
 
   patch:
     enabled: true
-
+  ssh-audit:
+    enabled: true
   reboot:
     enabled: true
   dav_n8n_version:
