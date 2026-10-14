@@ -6,7 +6,8 @@ policy:
 allowed_actions:
   check:
     enabled: true
-
+  ssh_crypto_audit:
+    enabled: true
   patch:
     enabled: true
   ssh_audit:
