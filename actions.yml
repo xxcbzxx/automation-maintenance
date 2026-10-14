@@ -6,3 +6,4 @@ actions:
   - version.sh
   - dav_n8n_version.sh
   - ssh_audit.sh
+  - ssh_crypto_audit.sh
